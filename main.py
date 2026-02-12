@@ -15,15 +15,16 @@ def main():
     #Get args from user for custom prompt
     parser = argparse.ArgumentParser(description="Mini Reno")
     parser.add_argument("user_prompt", type=str, help="User Prompt")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
     #Create client with api key and store conversation list
     client = genai.Client(api_key=api_key)
-
+    message_history = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
     #Choose model and provide prompt
     response = client.models.generate_content(
-        model='gemini-2.5-flash', contents=args.user_prompt
+        model='gemini-2.5-flash', contents=message_history
     )
 
     #Get the response and then print the output
@@ -31,10 +32,13 @@ def main():
     if get_response.usage_metadata == None:
         raise RuntimeError("Failed API Request")
 
-    print(f"User prompt: {args.user_prompt}")
-    print(f"Prompt tokens: {get_response.usage_metadata.prompt_token_count}")
-    print(f"Response tokens: {get_response.usage_metadata.candidates_token_count}")
-    print(f"Response:\n{get_response.text}")
+    if args.verbose == True:
+        print(f"User prompt: {args.user_prompt}")
+        print(f"Prompt tokens: {get_response.usage_metadata.prompt_token_count}")
+        print(f"Response tokens: {get_response.usage_metadata.candidates_token_count}")
+        print(f"Response:\n{get_response.text}")
+    else:
+        print(f"Response:\n{get_response.text}")
 
 
 if __name__ == "__main__":
