@@ -12,7 +12,7 @@ def get_files_info(working_directory, directory="."):
             file_info = []
             for f in get_files:
                 try:
-                    file_info.append(f"- {f}: file_size={os.path.getsize(f"{full_path}/{f}")} bytes, is_dir={os.path.isdir(f)}\n")
+                    file_info.append(f"- {f}: file_size={os.path.getsize(f"{full_path}/{f}")} bytes, is_dir={os.path.isdir(f"{full_path}/{f}")}\n")
                 except Exception as err:
                     return f"Error: {err}"
             return "".join(file_info)
