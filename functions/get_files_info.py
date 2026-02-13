@@ -15,11 +15,8 @@ def get_files_info(working_directory, directory="."):
                     file_info.append(f"- {f}: file_size={os.path.getsize(f"{full_path}/{f}")} bytes, is_dir={os.path.isdir(f)}\n")
                 except Exception as err:
                     return f"Error: {err}"
-
-            print("".join(file_info))
+            return "".join(file_info)
         else:
             return f'Error: Cannot list "{directory}" as it is outside the permitted working directory'
     else:
         f'Error: "{directory}" is not a directory'
-
-get_files_info("/home/ubuntu/workspace/bootdotdev/llm-agent", "calculator")
