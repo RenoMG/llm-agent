@@ -2,6 +2,7 @@ import os, argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from prompts import SYSTEM_PROMPT
 
 def main():
 
@@ -24,7 +25,9 @@ def main():
 
     #Choose model and provide prompt
     response = client.models.generate_content(
-        model='gemini-2.5-flash', contents=message_history
+        model='gemini-2.5-flash', 
+        contents=message_history,
+        config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, temperature=0)
     )
 
     #Get the response and then print the output
