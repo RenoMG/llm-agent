@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from google.genai import types
 
 load_dotenv()
 MAX_CHAR = os.environ.get("MAX_CHAR")
@@ -19,3 +20,18 @@ def get_file_content(working_directory, file_path):
             return f'Error: File not found or is not a regular file: "{file_path}"'
     else:
         return f'Error: Cannot read "{file_path}" as it is outside the permitted working directory'
+    
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Return the contents of a specified file.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="Path to the file.",
+            ),
+        },
+    required=["file_path"],
+    ),
+)

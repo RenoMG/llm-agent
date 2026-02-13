@@ -1,4 +1,5 @@
 import os, time, subprocess
+from google.genai import types
 
 def run_python_file(working_directory, file_path, args=None):
     abs_path = os.path.abspath(working_directory)
@@ -23,7 +24,7 @@ def run_python_file(working_directory, file_path, args=None):
 
                     if len(run_command.stdout) != 0 or len(run_command.stderr) != 0:
                         string_to_return = string_to_return + f"STDOUT: {run_command.stdout}\nSTDERR: {run_command.stderr}"
-                    #time.sleep(30)
+                    time.sleep(30)
                     return string_to_return
 
                 except Exception as err:
@@ -33,3 +34,22 @@ def run_python_file(working_directory, file_path, args=None):
             
     else:
         return f'Error: Cannot execute "{file_path}" as it is outside the permitted working directory'
+    
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="Run a specified Python file.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="Path to the file.",
+            ),
+            "args": types.Schema(
+                type=types.Type.STRING,
+                description="Arguments to pass, optional.",
+            ),
+        },
+    required=["file_path"],
+    ),
+)

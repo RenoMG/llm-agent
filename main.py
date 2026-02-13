@@ -3,6 +3,10 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompts import SYSTEM_PROMPT
+from functions.get_files_info import schema_get_files_info
+from functions.get_file_content import schema_get_file_content
+from functions.write_file import schema_write_file
+from functions.run_python_file import schema_run_python_file
 
 def main():
 
@@ -23,11 +27,19 @@ def main():
     client = genai.Client(api_key=api_key)
     message_history = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
+    #Available function calls
+    available_functions = types.Tool(
+    function_declarations=[schema_get_files_info, schema_get_file_content, schema_write_file, schema_run_python_file],
+    )
+
     #Choose model and provide prompt
     response = client.models.generate_content(
         model='gemini-2.5-flash', 
         contents=message_history,
-        config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, temperature=0)
+        config=types.GenerateContentConfig(
+            tools=[available_functions],
+            system_instruction=SYSTEM_PROMPT, 
+            temperature=0)   
     )
 
     #Get the response and then print the output
@@ -39,9 +51,17 @@ def main():
         print(f"User prompt: {args.user_prompt}")
         print(f"Prompt tokens: {get_response.usage_metadata.prompt_token_count}")
         print(f"Response tokens: {get_response.usage_metadata.candidates_token_count}")
-        print(f"Response:\n{get_response.text}")
+        if get_response.function_calls != None:
+            for call in get_response.function_calls:
+                print(f"Calling function: {call.name}({call.args}) \n")
+        else:
+            print(f"Response:\n{get_response.text}")
     else:
-        print(f"Response:\n{get_response.text}")
+        if get_response.function_calls != None:
+            for call in get_response.function_calls:
+                print(f"Calling function: {call.name}({call.args}) \n")
+        else:
+            print(f"Response:\n{get_response.text}")
 
 
 if __name__ == "__main__":
