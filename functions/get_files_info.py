@@ -1,10 +1,9 @@
 import os
 
 def get_files_info(working_directory, directory="."):
-    if os.path.isdir(directory):
-        abs_path = os.path.abspath(working_directory)
-        full_path = os.path.normpath(os.path.join(abs_path, directory))
-
+    abs_path = os.path.abspath(working_directory)
+    full_path = os.path.normpath(os.path.join(abs_path, directory))
+    if os.path.isdir(full_path):
         valid_target_dir = os.path.commonpath([abs_path, full_path]) == abs_path
 
         if valid_target_dir:
@@ -14,4 +13,4 @@ def get_files_info(working_directory, directory="."):
     else:
         f'Error: "{directory}" is not a directory'
 
-get_files_info("llm-agent", "/home/ubuntu/workspace/pers")
+get_files_info("/home/ubuntu/workspace/bootdotdev/llm-agent")
