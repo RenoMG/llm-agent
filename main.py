@@ -26,102 +26,120 @@ def main():
     #Create client with api key and store conversation list
     client = genai.Client(api_key=api_key)
     message_history = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
+    function_responses = []
 
     #Available function calls
     available_functions = types.Tool(
     function_declarations=[schema_get_files_info, schema_get_file_content, schema_write_file, schema_run_python_file],
     )
 
-    #Choose model and provide prompt
-    response = client.models.generate_content(
-        model='gemini-2.5-flash', 
-        contents=message_history,
-        config=types.GenerateContentConfig(
-            tools=[available_functions],
-            system_instruction=SYSTEM_PROMPT, 
-            temperature=0)   
-    )
+    #Wrap calling logic for agent loop, 20 times
+    for i in range(20):
 
-    #Get the response and then print the output
-    get_response = response
-    if get_response.usage_metadata == None:
-        raise RuntimeError("Failed API Request")
-    
-    #Call function
-    def call_function(function_call, verbose=False):
-        if verbose:
-            print(f"Calling function: {function_call.name}({function_call.args})")
-        else:
-            print(f"Calling function: {function_call.name}")
+        #Choose model and provide prompt
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=message_history,
+            config=types.GenerateContentConfig(
+                tools=[available_functions],
+                system_instruction=SYSTEM_PROMPT, 
+                temperature=0)   
+        )
 
-        function_map = {
-        "get_file_content": get_file_content,
-        "write_file" : write_file,
-        "get_files_info": get_files_info,
-        "run_python_file": run_python_file,
-        }
+        #Get the response and then print the output
+        get_response = response
+        if get_response.usage_metadata == None:
+            raise RuntimeError("Failed API Request")
+        
+        for item in response.candidates:
+            message_history.append(item.content)
 
-        function_name = function_call.name or ""
+        
+        
+        #Call function
+        def call_function(function_call, verbose=False):
+            if verbose:
+                print(f"Calling function: {function_call.name}({function_call.args})")
+            else:
+                print(f"Calling function: {function_call.name}")
 
-        if function_name not in function_map:
+            function_map = {
+            "get_file_content": get_file_content,
+            "write_file" : write_file,
+            "get_files_info": get_files_info,
+            "run_python_file": run_python_file,
+            }
+
+            function_name = function_call.name or ""
+
+            if function_name not in function_map:
+                return types.Content(
+                    role="tool",
+                    parts=[
+                        types.Part.from_function_response(
+                            name=function_name,
+                            response={"error": f"Unknown function: {function_name}"},
+                        )
+                    ],
+                )          
+            
+            args = dict(function_call.args) if function_call.args else {}
+
+            args["working_directory"] = "./calculator"
+
+            function_result = function_map[function_name](**args)
+
             return types.Content(
-                role="tool",
-                parts=[
-                    types.Part.from_function_response(
-                        name=function_name,
-                        response={"error": f"Unknown function: {function_name}"},
+            role="tool",
+            parts=[
+            types.Part.from_function_response(
+                name=function_name,
+                response={"result": function_result},
                     )
                 ],
-            )          
-        
-        args = dict(function_call.args) if function_call.args else {}
+            )
 
-        args["working_directory"] = "./calculator"
-
-        function_result = function_map[function_name](**args)
-
-        return types.Content(
-        role="tool",
-        parts=[
-        types.Part.from_function_response(
-            name=function_name,
-            response={"result": function_result},
-                )
-            ],
-        )
-          
-    if args.verbose == True:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {get_response.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {get_response.usage_metadata.candidates_token_count}")
-        if get_response.function_calls != None:
-            function_call_result = ""
-            for call in get_response.function_calls:
-                function_call_result = call_function(call, True)
-            if len(function_call_result.parts) == 0:
-                raise Exception("Empty .parts list!")
-            if function_call_result.parts[0] == None:
-                raise Exception(".parts[0] is none!")
-            if function_call_result.parts[0].function_response.response == None:
-                raise Exception("Response is none!")
-            function_call_result.parts[0].function_response.response
-            print(f"-> {function_call_result.parts[0].function_response.response}")
+        if args.verbose == True:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {get_response.usage_metadata.prompt_token_count}")
+            print(f"Response tokens: {get_response.usage_metadata.candidates_token_count}")
+            if get_response.function_calls != None:
+                function_call_result = ""
+                for call in get_response.function_calls:
+                    function_call_result = call_function(call, True)
+                if len(function_call_result.parts) == 0:
+                    raise Exception("Empty .parts list!")
+                if function_call_result.parts[0] == None:
+                    raise Exception(".parts[0] is none!")
+                if function_call_result.parts[0].function_response.response == None:
+                    raise Exception("Response is none!")
+                function_responses.append(function_call_result.parts[0])
+                function_call_result.parts[0].function_response.response
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+            else:
+                print(f"Response:\n{get_response.text}")
+                break
         else:
-            print(f"Response:\n{get_response.text}")
-    else:
-        if get_response.function_calls != None:
-            function_call_result = ""
-            for call in get_response.function_calls:
-                function_call_result = call_function(call, False)
-            if len(function_call_result.parts) == 0:
-                raise Exception("Empty .parts list!")
-            if function_call_result.parts[0] == None:
-                raise Exception(".parts[0] is none!")
-            if function_call_result.parts[0].function_response.response == None:
-                raise Exception("Response is none!")
-            function_call_result.parts[0].function_response.response
-        else:
-            print(f"Response:\n{get_response.text}")
+            if get_response.function_calls != None:
+                function_call_result = ""
+                for call in get_response.function_calls:
+                    function_call_result = call_function(call, False)
+                if len(function_call_result.parts) == 0:
+                    raise Exception("Empty .parts list!")
+                if function_call_result.parts[0] == None:
+                    raise Exception(".parts[0] is none!")
+                if function_call_result.parts[0].function_response.response == None:
+                    raise Exception("Response is none!")
+                function_responses.append(function_call_result.parts[0])
+                function_call_result.parts[0].function_response.response
+            else:
+                print(f"Response:\n{get_response.text}")
+                break
+        message_history.append(types.Content(role="user", parts=function_responses))
+
+        if i == 20:
+            print("Range limit reached")
+            exit(1)
 
 
 if __name__ == "__main__":
