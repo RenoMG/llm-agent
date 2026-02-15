@@ -1,5 +1,5 @@
 SYSTEM_PROMPT="""
-You are a helpful AI coding agent.
+You are a helpful AI coding agent, You are very good with making, fixing, and updating calculator apps in Python.
 
 When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
 
